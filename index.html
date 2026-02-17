@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>General Prototyper</title>
+    <style>
+        :root {
+            --bg-dark: #1e1e1e;
+            --bg-darker: #121212;
+            --accent: #3b82f6;
+            --text-main: #e5e7eb;
+            --text-muted: #9ca3af;
+            --border: #374151;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-darker);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header & Toolbar --- */
+        header {
+            background-color: var(--bg-dark);
+            padding: 0 1rem;
+            height: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand { font-weight: 700; font-size: 1rem; letter-spacing: -0.5px; }
+        .brand span { color: var(--accent); }
+
+        .toolbar { display: flex; gap: 0.5rem; align-items: center; }
+
+        select, button, input {
+            background: #2d2d2d;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            height: 30px;
+            cursor: pointer;
+        }
+
+        select:hover, button:hover { border-color: var(--accent); }
+        
+        button.action-btn { background: var(--accent); border: none; color: white; font-weight: 600; }
+        button.action-btn:hover { opacity: 0.9; }
+
+        /* --- Layout Grid --- */
+        .main-container {
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            height: calc(100vh - 50px);
+        }
+
+        /* Editors (Top Half) */
+        .editors {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            background: var(--bg-darker);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .editor-group {
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            position: relative;
+        }
+        .editor-group:last-child { border-right: none; }
+
+        .editor-label {
+            background: #252526;
+            color: var(--text-muted);
+            padding: 5px 10px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        textarea {
+            flex: 1;
+            background-color: var(--bg-darker);
+            color: #d4d4d4;
+            border: none;
+            padding: 10px;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: none;
+        }
+
+        /* Preview (Bottom Half) */
+        .preview-wrapper {
+            position: relative;
+            background: white;
+            width: 100%;
+            height: 100%;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        /* Status Bar / Toast */
+        #status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--accent);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">Gen<span>Editor</span></div>
+        <div class="toolbar">
+            <select id="libSelector">
+                <option value="">+ Add Framework (CDN)</option>
+                <option value="bootstrap">Bootstrap 5 (CSS Only)</option>
+                <option value="tailwind">Tailwind CSS (Script)</option>
+                <option value="vue">Vue 3 (Global)</option>
+                <option value="react">React + ReactDOM (Dev)</option>
+                <option value="jquery">jQuery 3.6</option>
+            </select>
+
+            <select id="presetSelector">
+                <option value="" disabled selected>Load Preset...</option>
+                <optgroup label="Starters">
+                    <option value="empty">HTML5 Empty</option>
+                    <option value="flex">Flexbox Center</option>
+                    <option value="grid">CSS Grid Layout</option>
+                </optgroup>
+                <optgroup label="User Saved" id="userPresetsGroup">
+                    </optgroup>
+            </select>
+
+            <button onclick="saveUserPreset()">Save as New</button>
+            <button class="action-btn" onclick="run()">Run ▶</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="editors">
+            <div class="editor-group">
+                <div class="editor-label">HTML <span>&lt;/&gt;</span></div>
+                <textarea id="html" spellcheck="false" placeholder=""></textarea>
+            </div>
+            <div class="editor-group">
+                <div class="editor-label">CSS <span>#</span></div>
+                <textarea id="css" spellcheck="false" placeholder="/* Styles */"></textarea>
+            </div>
+            <div class="editor-group">
+                <div class="editor-label">JS <span>{}</span></div>
+                <textarea id="js" spellcheck="false" placeholder="// Logic"></textarea>
+            </div>
+        </div>
+
+        <div class="preview-wrapper">
+            <iframe id="preview"></iframe>
+        </div>
+    </div>
+
+    <div id="status">Saved!</div>
+
+    <script>
+        // DOM Elements
+        const htmlEd = document.getElementById('html');
+        const cssEd = document.getElementById('css');
+        const jsEd = document.getElementById('js');
+        const preview = document.getElementById('preview');
+        const libSelector = document.getElementById('libSelector');
+        const presetSelector = document.getElementById('presetSelector');
+        const userGroup = document.getElementById('userPresetsGroup');
+
+        // --- 1. GENERALIZED DATA STRUCTURES ---
+        
+        // CDN Mappings for Libraries
+        const LIBRARIES = {
+            bootstrap: '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">',
+            tailwind: '<script src="https://cdn.tailwindcss.com"><\/script>',
+            vue: '<script src="https://unpkg.com/vue@3/dist/vue.global.js"><\/script>',
+            react: '<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"><\/script>\n<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"><\/script>',
+            jquery: '<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>'
+        };
+
+        // Standard Boilerplates
+        const DEFAULTS = {
+            empty: { h: '', c: '', j: '' },
+            flex: {
+                h: '<div class="box">\n  Centered Content\n</div>',
+                c: 'body {\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  min-height: 100vh;\n  margin: 0;\n  font-family: sans-serif;\n  background: #f0f0f0;\n}\n\n.box {\n  padding: 2rem;\n  background: white;\n  border-radius: 8px;\n  box-shadow: 0 4px 6px rgba(0,0,0,0.1);\n}',
+                j: ''
+            },
+            grid: {
+                h: '<div class="grid">\n  <div class="item">1</div>\n  <div class="item">2</div>\n  <div class="item">3</div>\n  <div class="item">4</div>\n</div>',
+                c: '.grid {\n  display: grid;\n  grid-template-columns: repeat(2, 1fr);\n  gap: 10px;\n  padding: 20px;\n}\n\n.item {\n  background: #3b82f6;\n  color: white;\n  padding: 20px;\n  text-align: center;\n  font-family: sans-serif;\n}',
+                j: ''
+            }
+        };
+
+        // Current active libraries (Set ensures uniqueness)
+        let activeLibs = new Set();
+
+        // --- 2. CORE LOGIC ---
+
+        function run() {
+            // Build the library strings
+            const libTags = Array.from(activeLibs).map(key => LIBRARIES[key]).join('\n');
+            
+            const content = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    ${libTags}
+                    <style>${cssEd.value}</style>
+                </head>
+                <body>
+                    ${htmlEd.value}
+                    <script>${jsEd.value}<\/script>
+                </body>
+                </html>
+            `;
+
+            const doc = preview.contentDocument || preview.contentWindow.document;
+            doc.open();
+            doc.write(content);
+            doc.close();
+        }
+
+        // --- 3. LIBRARY MANAGEMENT ---
+
+        libSelector.addEventListener('change', (e) => {
+            const lib = e.target.value;
+            if (lib && LIBRARIES[lib]) {
+                if(!activeLibs.has(lib)) {
+                    activeLibs.add(lib);
+                    showToast(`Added ${lib}`);
+                    run(); // Auto-refresh with new lib
+                }
+            }
+            e.target.value = ""; // Reset selector
+        });
+
+        // --- 4. PRESET MANAGEMENT (LocalStorage) ---
+
+        function loadPresetsUI() {
+            // Clear existing user options
+            userGroup.innerHTML = "";
+            
+            // Get from LocalStorage
+            const stored = JSON.parse(localStorage.getItem('genEditor_presets') || '{}');
+            
+            for (const name in stored) {
+                const opt = document.createElement('option');
+                opt.value = `user:${name}`;
+                opt.textContent = name;
+                userGroup.appendChild(opt);
+            }
+        }
+
+        function saveUserPreset() {
+            const name = prompt("Name your preset:");
+            if (!name) return;
+
+            const data = {
+                h: htmlEd.value,
+                c: cssEd.value,
+                j: jsEd.value,
+                libs: Array.from(activeLibs)
+            };
+
+            const stored = JSON.parse(localStorage.getItem('genEditor_presets') || '{}');
+            stored[name] = data;
+            localStorage.setItem('genEditor_presets', JSON.stringify(stored));
+            
+            loadPresetsUI();
+            showToast("Preset Saved!");
+        }
+
+        presetSelector.addEventListener('change', (e) => {
+            const val = e.target.value;
+            
+            // Handle User Presets
+            if (val.startsWith('user:')) {
+                const name = val.split('user:')[1];
+                const stored = JSON.parse(localStorage.getItem('genEditor_presets') || '{}');
+                const p = stored[name];
+                if (p) {
+                    htmlEd.value = p.h;
+                    cssEd.value = p.c;
+                    jsEd.value = p.j;
+                    activeLibs = new Set(p.libs || []); // Restore libs
+                    run();
+                }
+            } 
+            // Handle Default Boilerplates
+            else if (DEFAULTS[val]) {
+                const p = DEFAULTS[val];
+                htmlEd.value = p.h;
+                cssEd.value = p.c;
+                jsEd.value = p.j;
+                activeLibs.clear(); // Defaults usually start clean
+                run();
+            }
+            e.target.value = ""; // Reset dropdown
+        });
+
+        // --- 5. UTILITIES ---
+
+        function showToast(msg) {
+            const t = document.getElementById('status');
+            t.textContent = msg;
+            t.style.opacity = '1';
+            setTimeout(() => t.style.opacity = '0', 2000);
+        }
+
+        // Enable Tab Indentation
+        [htmlEd, cssEd, jsEd].forEach(el => {
+            el.addEventListener('keydown', function(e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    document.execCommand('insertText', false, '  ');
+                }
+            });
+            // Auto-run on typing (debounced slightly could be better, but instant is fine here)
+            el.addEventListener('input', run);
+        });
+
+        // Init
+        window.onload = () => {
+            loadPresetsUI();
+            // Load Flexbox starter by default
+            const p = DEFAULTS.flex;
+            htmlEd.value = p.h;
+            cssEd.value = p.c;
+            run();
+        };
+
+    </script>
+</body>
+</html>
