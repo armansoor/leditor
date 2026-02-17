@@ -20,8 +20,10 @@ function run() {
     const cssEd = document.getElementById('css');
     const jsEd = document.getElementById('js');
 
-    // Clear console on run
-    consoleDiv.innerHTML = '';
+    // Clear console content but keep the header
+    // Using simple approach: removing all div.console-entry
+    const entries = consoleDiv.querySelectorAll('.console-entry');
+    entries.forEach(e => e.remove());
 
     // Build the library strings
     const libTags = Array.from(activeLibs).map(key => LIBRARIES[key]).join('\n');
