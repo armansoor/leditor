@@ -52,6 +52,10 @@ presetSelector.addEventListener('change', (e) => {
 // --- SHARE & DOWNLOAD ---
 
 function downloadProject() {
+    const htmlEd = document.getElementById('html');
+    const cssEd = document.getElementById('css');
+    const jsEd = document.getElementById('js');
+
     const html = htmlEd.value;
     const css = cssEd.value;
     const js = jsEd.value;
@@ -90,6 +94,10 @@ ${js}
 }
 
 function shareProject() {
+    const htmlEd = document.getElementById('html');
+    const cssEd = document.getElementById('css');
+    const jsEd = document.getElementById('js');
+
     const state = {
         h: htmlEd.value,
         c: cssEd.value,
@@ -116,6 +124,10 @@ function shareProject() {
 // Init
 window.onload = () => {
     loadPresetsUI();
+
+    const htmlEd = document.getElementById('html');
+    const cssEd = document.getElementById('css');
+    const jsEd = document.getElementById('js');
 
     // Check for shared project in URL hash
     if (window.location.hash.length > 1) {
